@@ -101,10 +101,48 @@ def milestone_3(model_path=None):
 
 
 
-# --- Milestone 4: Create a CLI game interface presenting partial legal sentences for completion.
-# Hint: Design an interactive command-line interface for user input and game flow.
-def milestone_4():  # TODO(milestone 4)
-    raise NotImplementedError("TODO(milestone 4)")
+
+# --- Milestone 4: CLI Legal Sentence Game ---
+
+LEGAL_PROMPTS = [
+    "The parties agree to",
+    "The employee shall",
+    "The contractor shall",
+    "The tenant shall",
+    "The agreement shall",
+]
+
+
+def complete_sentence(prompt, answer):
+    """Combine a legal prompt with the player's answer."""
+    prompt = prompt.strip()
+    answer = answer.strip()
+
+    if not answer:
+        raise ValueError("Answer cannot be empty.")
+
+    sentence = f"{prompt} {answer}"
+
+    if sentence[-1] not in ".!?":
+        sentence += "."
+
+    return sentence
+
+
+def get_next_word_hint(prompt, model):
+    """Get a next-word hint from the n-gram model."""
+    return predict_next_word(model, prompt)
+
+
+def milestone_4():
+    """Prepare the CLI game using the n-gram model."""
+    model = milestone_2()
+
+    return {
+        "prompts": LEGAL_PROMPTS.copy(),
+        "ngram_model": model,
+    }
+
 
 
 # --- Milestone 5: After user completion, classify the full sentence and provide feedback.

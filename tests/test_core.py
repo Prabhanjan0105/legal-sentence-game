@@ -113,10 +113,59 @@ def test_milestone_3(monkeypatch):
 
 
 
-# Milestone 4: Create a CLI game interface presenting partial legal sentences for completion.
-@pytest.mark.skip(reason="remove this line when you start milestone 4")
-def test_milestone_4():
-    raise NotImplementedError("write the test for milestone 4")
+
+def test_milestone_4(monkeypatch, capsys):
+    from app.core import (
+        milestone_4,
+        complete_sentence,
+        get_next_word_hint,
+    )
+    from app.cli import main
+
+    game = milestone_4()
+
+    assert "prompts" in game
+    assert "ngram_model" in game
+    assert len(game["prompts"]) == 5
+
+    sentence = complete_sentence(
+        "The parties agree to",
+        "comply with all laws"
+    )
+
+    assert sentence == (
+        "The parties agree to comply with all laws."
+    )
+
+    hint = get_next_word_hint(
+        "The parties agree to",
+        game["ngram_model"]
+    )
+
+    assert hint == "comply"
+
+    # Simulate completing all five rounds
+    answers = iter([
+        "comply with all laws", "",
+        "maintain confidentiality", "",
+        "complete the work", "",
+        "pay rent on time", "",
+        "remain valid",
+    ])
+
+    monkeypatch.setattr(
+        "builtins.input",
+        lambda prompt="": next(answers)
+    )
+
+    main(["play"])
+
+    output = capsys.readouterr().out
+
+    assert "LEGAL SENTENCE GAME" in output
+    assert "Completed sentence:" in output
+    assert "Rounds completed: 5/5" in output
+
 
 
 # Milestone 5: After user completion, classify the full sentence and provide feedback.
