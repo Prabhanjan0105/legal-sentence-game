@@ -85,10 +85,20 @@ def milestone_2():
     return model
 
 
-# --- Milestone 3: Load the fine-tuned GPT-2 model for legal clause classification.
-# Hint: Load the pre-trained and fine-tuned GPT-2 model for text classification, similar to the 'Fine-Tune GPT-2 to Tag Legal Contract Clauses' drill.
-def milestone_3():  # TODO(milestone 3)
-    raise NotImplementedError("TODO(milestone 3)")
+
+def milestone_3(model_path=None):
+    """Load the fine-tuned legal clause classifier."""
+    import os
+    from app.classifier import LegalClauseClassifier
+
+    if model_path is None:
+        model_path = os.environ.get(
+            "LEGAL_GPT2_MODEL",
+            "models/legal-gpt2"
+        )
+
+    return LegalClauseClassifier(model_path)
+
 
 
 # --- Milestone 4: Create a CLI game interface presenting partial legal sentences for completion.

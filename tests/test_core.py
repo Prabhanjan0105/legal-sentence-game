@@ -61,10 +61,56 @@ def test_milestone_2():
     assert sample_model[("the", "party")]["shall"] == 2
 
 
-# Milestone 3: Load the fine-tuned GPT-2 model for legal clause classification.
-@pytest.mark.skip(reason="remove this line when you start milestone 3")
-def test_milestone_3():
-    raise NotImplementedError("write the test for milestone 3")
+
+def test_milestone_3(monkeypatch):
+    from unittest.mock import MagicMock
+    from app import classifier as classifier_module
+    from app.core import milestone_3
+
+    fake_tokenizer = MagicMock()
+    fake_tokenizer.pad_token = "<pad>"
+    fake_tokenizer.pad_token_id = 0
+    fake_tokenizer.return_value = {
+        "input_ids": __import__("torch").tensor(
+            [[1, 2, 3]]
+        )
+    }
+
+    fake_model = MagicMock()
+    fake_model.config.pad_token_id = 0
+    fake_model.config.id2label = {
+        0: "Confidentiality",
+        1: "Termination",
+    }
+
+    import torch
+    fake_model.return_value.logits = torch.tensor(
+        [[3.0, 1.0]]
+    )
+
+    monkeypatch.setattr(
+        classifier_module.AutoTokenizer,
+        "from_pretrained",
+        lambda path: fake_tokenizer
+    )
+
+    monkeypatch.setattr(
+        classifier_module.AutoModelForSequenceClassification,
+        "from_pretrained",
+        lambda path: fake_model
+    )
+
+    classifier = milestone_3("fake-model")
+
+    result = classifier.predict(
+        "The employee shall maintain confidentiality."
+    )
+
+    assert result["clause_type"] == "Confidentiality"
+    assert 0 <= result["confidence"] <= 1
+
+    fake_model.eval.assert_called_once()
+
 
 
 # Milestone 4: Create a CLI game interface presenting partial legal sentences for completion.
