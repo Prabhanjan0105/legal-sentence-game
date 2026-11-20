@@ -1,48 +1,62 @@
 
+import os
 import re
 from pathlib import Path
 from collections import defaultdict, Counter
 
+
+# ==========================================
+# MILESTONE 1: LEGAL CORPUS PREPROCESSING
+# ==========================================
+
 def preprocess_text(text):
     """Clean and tokenize legal text."""
     text = text.lower()
-    text = re.sub(r"[^a-z0-9\s]", "", text)
+    text = re.sub(r"[^a-z0-9\s]", " ", text)
     return text.split()
 
 
 def load_legal_corpus(file_path):
-    """Read legal sentences from a text file."""
-    with open(file_path, "r", encoding="utf-8") as file:
+    """Load sentences from the legal corpus."""
+    path = Path(file_path)
+
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Legal corpus not found: {path}"
+        )
+
+    with path.open("r", encoding="utf-8") as file:
         sentences = [
             line.strip()
             for line in file
             if line.strip()
         ]
+
     return sentences
 
 
 def milestone_1():
-    """Prepare tokenized legal sentences."""
+    """Return tokenized legal sentences."""
     project_root = Path(__file__).resolve().parent.parent
-    corpus_path = project_root / "data" / "legal_corpus.txt"
+
+    corpus_path = (
+        project_root / "data" / "legal_corpus.txt"
+    )
 
     sentences = load_legal_corpus(corpus_path)
 
-    tokenized_sentences = [
+    return [
         preprocess_text(sentence)
         for sentence in sentences
     ]
 
-    return tokenized_sentences
 
-
-
-
-
-# --- Milestone 2: N-gram Next-Word Predictor ---
+# ==========================================
+# MILESTONE 2: N-GRAM NEXT-WORD PREDICTOR
+# ==========================================
 
 def build_ngram_model(tokenized_sentences, n=3):
-    """Build an n-gram frequency model."""
+    """Build a frequency-based n-gram model."""
     if n < 2:
         raise ValueError("n must be at least 2")
 
@@ -52,13 +66,14 @@ def build_ngram_model(tokenized_sentences, n=3):
         for i in range(len(tokens) - n + 1):
             context = tuple(tokens[i:i + n - 1])
             next_word = tokens[i + n - 1]
+
             model[context][next_word] += 1
 
     return dict(model)
 
 
 def predict_next_word(model, text, n=3):
-    """Predict the most frequent next word."""
+    """Predict the most common next word."""
     tokens = preprocess_text(text)
 
     if len(tokens) < n - 1:
@@ -69,26 +84,21 @@ def predict_next_word(model, text, n=3):
     if context not in model:
         return None
 
-    predictions = model[context]
-    return predictions.most_common(1)[0][0]
+    return model[context].most_common(1)[0][0]
 
 
 def milestone_2():
-    """Train a trigram model using the legal corpus."""
-    tokenized_sentences = milestone_1()
-
-    model = build_ngram_model(
-        tokenized_sentences,
-        n=3
-    )
-
-    return model
+    """Train a trigram model."""
+    corpus = milestone_1()
+    return build_ngram_model(corpus, n=3)
 
 
+# ==========================================
+# MILESTONE 3: GPT-2 CLASSIFIER LOADING
+# ==========================================
 
 def milestone_3(model_path=None):
-    """Load the fine-tuned legal clause classifier."""
-    import os
+    """Load the fine-tuned GPT-2 classifier."""
     from app.classifier import LegalClauseClassifier
 
     if model_path is None:
@@ -100,9 +110,9 @@ def milestone_3(model_path=None):
     return LegalClauseClassifier(model_path)
 
 
-
-
-# --- Milestone 4: CLI Legal Sentence Game ---
+# ==========================================
+# MILESTONE 4: INTERACTIVE GAME LOGIC
+# ==========================================
 
 LEGAL_PROMPTS = [
     "The parties agree to",
@@ -114,7 +124,7 @@ LEGAL_PROMPTS = [
 
 
 def complete_sentence(prompt, answer):
-    """Combine a legal prompt with the player's answer."""
+    """Combine the prompt and player's answer."""
     prompt = prompt.strip()
     answer = answer.strip()
 
@@ -130,12 +140,12 @@ def complete_sentence(prompt, answer):
 
 
 def get_next_word_hint(prompt, model):
-    """Get a next-word hint from the n-gram model."""
+    """Generate an n-gram hint."""
     return predict_next_word(model, prompt)
 
 
 def milestone_4():
-    """Prepare the CLI game using the n-gram model."""
+    """Prepare game prompts and prediction model."""
     model = milestone_2()
 
     return {
@@ -144,8 +154,54 @@ def milestone_4():
     }
 
 
+# ==========================================
+# MILESTONE 5: CLASSIFICATION AND FEEDBACK
+# ==========================================
 
-# --- Milestone 5: After user completion, classify the full sentence and provide feedback.
-# Hint: Use the loaded GPT-2 model to classify the completed sentence and display feedback, referencing the 'Fine-Tune GPT-2 to Tag Legal Contract Clauses' drill.
-def milestone_5():  # TODO(milestone 5)
-    raise NotImplementedError("TODO(milestone 5)")
+def generate_feedback(result):
+    """Generate feedback for a classified clause."""
+    clause_type = result["clause_type"]
+    confidence = result["confidence"]
+
+    feedback = (
+        f"This sentence was classified as a "
+        f"{clause_type} clause."
+    )
+
+    if confidence >= 0.80:
+        feedback += (
+            "\nThe model reports high confidence "
+            "in this prediction."
+        )
+
+    elif confidence >= 0.50:
+        feedback += (
+            "\nThe model reports moderate confidence. "
+            "Consider reviewing the clause."
+        )
+
+    else:
+        feedback += (
+            "\nThe model reports low confidence. "
+            "The clause may require further review."
+        )
+
+    return feedback
+
+
+def milestone_5(sentence, classifier=None):
+    """Classify a completed sentence and give feedback."""
+    if not sentence or not sentence.strip():
+        raise ValueError("Sentence cannot be empty.")
+
+    if classifier is None:
+        classifier = milestone_3()
+
+    result = classifier.predict(sentence)
+
+    return {
+        "sentence": sentence,
+        "clause_type": result["clause_type"],
+        "confidence": result["confidence"],
+        "feedback": generate_feedback(result),
+    }

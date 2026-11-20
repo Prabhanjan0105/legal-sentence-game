@@ -1,5 +1,6 @@
 
 import torch
+
 from transformers import (
     AutoTokenizer,
     AutoModelForSequenceClassification,
@@ -7,12 +8,9 @@ from transformers import (
 
 
 class LegalClauseClassifier:
+    """GPT-2 legal clause classification model."""
+
     def __init__(self, model_path):
-        """
-        Load a fine-tuned GPT-2 classification model.
-        model_path can be a local directory or
-        a Hugging Face model repository ID.
-        """
         self.tokenizer = AutoTokenizer.from_pretrained(
             model_path
         )
@@ -35,8 +33,8 @@ class LegalClauseClassifier:
         self.model.eval()
 
     def predict(self, sentence):
-        """Classify a legal sentence."""
-        if not sentence.strip():
+        """Predict legal clause type and confidence."""
+        if not sentence or not sentence.strip():
             raise ValueError("Sentence cannot be empty.")
 
         inputs = self.tokenizer(
@@ -51,11 +49,15 @@ class LegalClauseClassifier:
             outputs = self.model(**inputs)
 
         probabilities = torch.softmax(
-            outputs.logits, dim=-1
+            outputs.logits,
+            dim=-1
         )
 
         predicted_id = int(
-            torch.argmax(probabilities, dim=-1).item()
+            torch.argmax(
+                probabilities,
+                dim=-1
+            ).item()
         )
 
         confidence = float(

@@ -2,14 +2,16 @@
 import argparse
 
 from app.core import (
+    milestone_3,
     milestone_4,
+    milestone_5,
     complete_sentence,
     get_next_word_hint,
 )
 
 
 def run_game():
-    """Run the interactive legal sentence game."""
+    """Run the interactive Legal Sentence Game."""
 
     game = milestone_4()
 
@@ -21,8 +23,22 @@ def run_game():
     print("=" * 45)
 
     print("\nWelcome to the Legal Sentence Game!")
-    print("Complete the legal sentences.")
+    print("Complete each legal sentence.")
     print("Type 'quit' to exit the game.\n")
+
+    # Load classifier once before the game starts.
+    try:
+        classifier = milestone_3()
+
+    except Exception as error:
+        print("\nUnable to load GPT-2 classifier.")
+        print(f"Error: {error}")
+        print(
+            "\nPlace your fine-tuned GPT-2 model in "
+            "'models/legal-gpt2' or configure "
+            "LEGAL_GPT2_MODEL."
+        )
+        return 0
 
     completed = 0
 
@@ -46,6 +62,7 @@ def run_game():
         while True:
             try:
                 answer = input("\nYour answer: ").strip()
+
             except (EOFError, KeyboardInterrupt):
                 print("\nGame exited.")
                 return completed
@@ -59,10 +76,41 @@ def run_game():
 
             print("Please enter a valid answer.")
 
-        sentence = complete_sentence(prompt, answer)
+        sentence = complete_sentence(
+            prompt,
+            answer
+        )
 
         print("\nCompleted sentence:")
         print(sentence)
+
+        print("\nAnalyzing legal clause...")
+
+        try:
+            result = milestone_5(
+                sentence,
+                classifier=classifier
+            )
+
+            print("\n" + "=" * 45)
+            print("         GPT-2 CLASSIFICATION")
+            print("=" * 45)
+
+            print(
+                f"\nClause Type: {result['clause_type']}"
+            )
+
+            print(
+                f"Confidence: "
+                f"{result['confidence'] * 100:.2f}%"
+            )
+
+            print("\nFeedback:")
+            print(result["feedback"])
+
+        except Exception as error:
+            print("\nClassification failed.")
+            print(f"Error: {error}")
 
         completed += 1
 
@@ -70,15 +118,23 @@ def run_game():
 
         if round_number < len(prompts):
             try:
-                input("\nPress Enter for the next round...")
+                input(
+                    "\nPress Enter for the next round..."
+                )
+
             except (EOFError, KeyboardInterrupt):
                 print("\nGame exited.")
                 return completed
 
     print("\n" + "=" * 45)
-    print("             GAME OVER")
+    print("              GAME OVER")
     print("=" * 45)
-    print(f"\nRounds completed: {completed}/{len(prompts)}")
+
+    print(
+        f"\nRounds completed: "
+        f"{completed}/{len(prompts)}"
+    )
+
     print("\nThank you for playing!")
 
     return completed
@@ -87,7 +143,10 @@ def run_game():
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="legal-sentence-game",
-        description="Interactive legal sentence completion game"
+        description=(
+            "Interactive legal sentence completion "
+            "game with GPT-2 classification"
+        )
     )
 
     sub = parser.add_subparsers(
@@ -102,7 +161,7 @@ def main(argv=None):
 
     sub.add_parser(
         "play",
-        help="Start the legal sentence game"
+        help="Start the Legal Sentence Game"
     )
 
     args = parser.parse_args(argv)

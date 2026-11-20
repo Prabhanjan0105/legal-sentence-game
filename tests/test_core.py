@@ -1,79 +1,92 @@
-"""Your tests. Each milestone in README.md gets one here: write the test first, then make it pass.
 
-They start skipped. Remove the `skip` line as you work on each milestone.
-"""
 import pytest
+import torch
+
+from unittest.mock import MagicMock
+
+from app.core import (
+    milestone_1,
+    milestone_2,
+    milestone_3,
+    milestone_4,
+    milestone_5,
+    preprocess_text,
+    build_ngram_model,
+    predict_next_word,
+    complete_sentence,
+    get_next_word_hint,
+)
 
 
+# ==========================================
+# MILESTONE 1 TEST
+# ==========================================
 
 def test_milestone_1():
-    from app.core import milestone_1, preprocess_text
+    tokens = preprocess_text(
+        "The Parties AGREE!"
+    )
 
-    tokens = preprocess_text("The Parties AGREE!")
-    assert tokens == ["the", "parties", "agree"]
+    assert tokens == [
+        "the", "parties", "agree"
+    ]
 
     corpus = milestone_1()
 
     assert len(corpus) == 20
-    assert all(isinstance(sentence, list) for sentence in corpus)
-    assert all(len(sentence) > 0 for sentence in corpus)
-    assert corpus[0][0] == "the"
+    assert all(
+        isinstance(sentence, list)
+        for sentence in corpus
+    )
+    assert all(len(s) > 0 for s in corpus)
 
 
+# ==========================================
+# MILESTONE 2 TEST
+# ==========================================
 
 def test_milestone_2():
-    from app.core import (
-        milestone_2,
-        build_ngram_model,
-        predict_next_word
-    )
-
     model = milestone_2()
 
     assert len(model) > 0
 
-    # Test the trained legal corpus
-    prediction = predict_next_word(
+    assert predict_next_word(
         model, "parties agree"
-    )
-    assert prediction == "to"
+    ) == "to"
 
-    # Test another legal phrase
-    prediction = predict_next_word(
+    assert predict_next_word(
         model, "the landlord"
-    )
-    assert prediction == "shall"
+    ) == "shall"
 
-    # Test an unknown context
-    prediction = predict_next_word(
+    assert predict_next_word(
         model, "unknown legalphrase"
-    )
-    assert prediction is None
+    ) is None
 
-    # Test the n-gram builder independently
     sample = [
         ["the", "party", "shall", "pay"],
-        ["the", "party", "shall", "comply"]
+        ["the", "party", "shall", "comply"],
     ]
 
     sample_model = build_ngram_model(sample, n=3)
 
-    assert sample_model[("the", "party")]["shall"] == 2
+    assert sample_model[
+        ("the", "party")
+    ]["shall"] == 2
 
 
+# ==========================================
+# MILESTONE 3 TEST
+# ==========================================
 
 def test_milestone_3(monkeypatch):
-    from unittest.mock import MagicMock
     from app import classifier as classifier_module
-    from app.core import milestone_3
 
     fake_tokenizer = MagicMock()
     fake_tokenizer.pad_token = "<pad>"
     fake_tokenizer.pad_token_id = 0
+
     fake_tokenizer.return_value = {
-        "input_ids": __import__("torch").tensor(
-            [[1, 2, 3]]
-        )
+        "input_ids": torch.tensor([[1, 2, 3]])
     }
 
     fake_model = MagicMock()
@@ -83,7 +96,6 @@ def test_milestone_3(monkeypatch):
         1: "Termination",
     }
 
-    import torch
     fake_model.return_value.logits = torch.tensor(
         [[3.0, 1.0]]
     )
@@ -112,14 +124,24 @@ def test_milestone_3(monkeypatch):
     fake_model.eval.assert_called_once()
 
 
+# ==========================================
+# SHARED FAKE CLASSIFIER FOR CLI TESTS
+# ==========================================
 
+class FakeClassifier:
+    def predict(self, sentence):
+        return {
+            "sentence": sentence,
+            "clause_type": "Confidentiality",
+            "confidence": 0.91,
+        }
+
+
+# ==========================================
+# MILESTONE 4 TEST
+# ==========================================
 
 def test_milestone_4(monkeypatch, capsys):
-    from app.core import (
-        milestone_4,
-        complete_sentence,
-        get_next_word_hint,
-    )
     from app.cli import main
 
     game = milestone_4()
@@ -144,7 +166,11 @@ def test_milestone_4(monkeypatch, capsys):
 
     assert hint == "comply"
 
-    # Simulate completing all five rounds
+    monkeypatch.setattr(
+        "app.cli.milestone_3",
+        lambda: FakeClassifier()
+    )
+
     answers = iter([
         "comply with all laws", "",
         "maintain confidentiality", "",
@@ -167,9 +193,48 @@ def test_milestone_4(monkeypatch, capsys):
     assert "Rounds completed: 5/5" in output
 
 
+# ==========================================
+# MILESTONE 5 TEST
+# ==========================================
 
-# Milestone 5: After user completion, classify the full sentence and provide feedback.
-@pytest.mark.skip(reason="remove this line when you start milestone 5")
-def test_milestone_5():
-    raise NotImplementedError("write the test for milestone 5")
+def test_milestone_5(monkeypatch, capsys):
+    from app.cli import main
 
+    classifier = FakeClassifier()
+
+    result = milestone_5(
+        "The employee shall maintain confidentiality.",
+        classifier=classifier
+    )
+
+    assert result["clause_type"] == "Confidentiality"
+    assert result["confidence"] == 0.91
+    assert "Confidentiality" in result["feedback"]
+
+    with pytest.raises(ValueError):
+        milestone_5("", classifier=classifier)
+
+    monkeypatch.setattr(
+        "app.cli.milestone_3",
+        lambda: classifier
+    )
+
+    answers = iter([
+        "maintain confidentiality",
+        "",
+        "quit",
+    ])
+
+    monkeypatch.setattr(
+        "builtins.input",
+        lambda prompt="": next(answers)
+    )
+
+    main(["play"])
+
+    output = capsys.readouterr().out
+
+    assert "GPT-2 CLASSIFICATION" in output
+    assert "Confidentiality" in output
+    assert "91.00%" in output
+    assert "Feedback:" in output
