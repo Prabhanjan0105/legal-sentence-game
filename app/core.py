@@ -1,7 +1,7 @@
 
 import re
 from pathlib import Path
-
+from collections import defaultdict, Counter
 
 def preprocess_text(text):
     """Clean and tokenize legal text."""
@@ -38,10 +38,51 @@ def milestone_1():
 
 
 
-# --- Milestone 2: Implement the n-gram next-word predictor.
-# Hint: Build the n-gram model and implement next-word prediction logic as shown in the 'Build a Next-Word Predictor from Scratch' drill.
-def milestone_2():  # TODO(milestone 2)
-    raise NotImplementedError("TODO(milestone 2)")
+
+# --- Milestone 2: N-gram Next-Word Predictor ---
+
+def build_ngram_model(tokenized_sentences, n=3):
+    """Build an n-gram frequency model."""
+    if n < 2:
+        raise ValueError("n must be at least 2")
+
+    model = defaultdict(Counter)
+
+    for tokens in tokenized_sentences:
+        for i in range(len(tokens) - n + 1):
+            context = tuple(tokens[i:i + n - 1])
+            next_word = tokens[i + n - 1]
+            model[context][next_word] += 1
+
+    return dict(model)
+
+
+def predict_next_word(model, text, n=3):
+    """Predict the most frequent next word."""
+    tokens = preprocess_text(text)
+
+    if len(tokens) < n - 1:
+        return None
+
+    context = tuple(tokens[-(n - 1):])
+
+    if context not in model:
+        return None
+
+    predictions = model[context]
+    return predictions.most_common(1)[0][0]
+
+
+def milestone_2():
+    """Train a trigram model using the legal corpus."""
+    tokenized_sentences = milestone_1()
+
+    model = build_ngram_model(
+        tokenized_sentences,
+        n=3
+    )
+
+    return model
 
 
 # --- Milestone 3: Load the fine-tuned GPT-2 model for legal clause classification.

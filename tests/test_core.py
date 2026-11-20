@@ -21,10 +21,44 @@ def test_milestone_1():
 
 
 
-# Milestone 2: Implement the n-gram next-word predictor.
-@pytest.mark.skip(reason="remove this line when you start milestone 2")
 def test_milestone_2():
-    raise NotImplementedError("write the test for milestone 2")
+    from app.core import (
+        milestone_2,
+        build_ngram_model,
+        predict_next_word
+    )
+
+    model = milestone_2()
+
+    assert len(model) > 0
+
+    # Test the trained legal corpus
+    prediction = predict_next_word(
+        model, "parties agree"
+    )
+    assert prediction == "to"
+
+    # Test another legal phrase
+    prediction = predict_next_word(
+        model, "the landlord"
+    )
+    assert prediction == "shall"
+
+    # Test an unknown context
+    prediction = predict_next_word(
+        model, "unknown legalphrase"
+    )
+    assert prediction is None
+
+    # Test the n-gram builder independently
+    sample = [
+        ["the", "party", "shall", "pay"],
+        ["the", "party", "shall", "comply"]
+    ]
+
+    sample_model = build_ngram_model(sample, n=3)
+
+    assert sample_model[("the", "party")]["shall"] == 2
 
 
 # Milestone 3: Load the fine-tuned GPT-2 model for legal clause classification.
