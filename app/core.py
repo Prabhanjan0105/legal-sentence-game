@@ -1,43 +1,30 @@
-"""Your code. One stub per milestone; build them in order and keep each one small."""
 
 import re
 from pathlib import Path
 
 
 def preprocess_text(text):
-    """Normalize and tokenize legal text."""
+    """Clean and tokenize legal text."""
     text = text.lower()
-    text = re.sub(r"[^a-z0-9\s]", " ", text)
-    tokens = text.split()
-    return tokens
+    text = re.sub(r"[^a-z0-9\s]", "", text)
+    return text.split()
 
 
 def load_legal_corpus(file_path):
-    """Load legal sentences from a text file."""
-    path = Path(file_path)
-
-    if not path.exists():
-        raise FileNotFoundError(
-            f"Legal corpus not found: {path}"
-        )
-
-    with path.open("r", encoding="utf-8") as file:
+    """Read legal sentences from a text file."""
+    with open(file_path, "r", encoding="utf-8") as file:
         sentences = [
             line.strip()
             for line in file
             if line.strip()
         ]
-
     return sentences
 
 
 def milestone_1():
     """Prepare tokenized legal sentences."""
-    corpus_path = (
-        Path(__file__).resolve().parent.parent
-        / "data"
-        / "legal_corpus.txt"
-    )
+    project_root = Path(__file__).resolve().parent.parent
+    corpus_path = project_root / "data" / "legal_corpus.txt"
 
     sentences = load_legal_corpus(corpus_path)
 
@@ -47,6 +34,7 @@ def milestone_1():
     ]
 
     return tokenized_sentences
+
 
 
 

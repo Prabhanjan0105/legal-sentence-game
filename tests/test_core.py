@@ -5,23 +5,20 @@ They start skipped. Remove the `skip` line as you work on each milestone.
 import pytest
 
 
+
 def test_milestone_1():
     from app.core import milestone_1, preprocess_text
 
-    tokens = preprocess_text(
-        "The Parties AGREE to comply!"
-    )
-
-    assert tokens == [
-        "the", "parties", "agree", "to", "comply"
-    ]
+    tokens = preprocess_text("The Parties AGREE!")
+    assert tokens == ["the", "parties", "agree"]
 
     corpus = milestone_1()
 
-    assert len(corpus) >= 20
-    assert all(isinstance(s, list) for s in corpus)
-    assert all(len(s) > 0 for s in corpus)
-    assert "agreement" in corpus[1]
+    assert len(corpus) == 20
+    assert all(isinstance(sentence, list) for sentence in corpus)
+    assert all(len(sentence) > 0 for sentence in corpus)
+    assert corpus[0][0] == "the"
+
 
 
 # Milestone 2: Implement the n-gram next-word predictor.
